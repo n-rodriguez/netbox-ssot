@@ -1,7 +1,5 @@
 github.com/PaloAltoNetworks/pango v0.10.2 h1:Tjn6vIzzAq6Dd7N0mDuiP8w8pz8k5W9zz/TTSUQCsQY=
 github.com/PaloAltoNetworks/pango v0.10.2/go.mod h1:GztcRnVLur7G+VFG7Z5ZKNFgScLtsycwPMp1qVebE5g=
-github.com/bl4ko/go-devicetype-library v0.1.54 h1:tf/yps5QnTGaVWmIAKOp0QfQndPAwrgi6s4eI5Mk2yk=
-github.com/bl4ko/go-devicetype-library v0.1.54/go.mod h1:Pzm1BlRyR4uECezsRINDA6ZieFPumdFL+6yySpXM6t8=
 github.com/bl4ko/go-devicetype-library v0.1.55 h1:LiWK/qMUbNXubzuyNIZD+kMal3sHhVUmgm74x5OHmPI=
 github.com/bl4ko/go-devicetype-library v0.1.55/go.mod h1:Pzm1BlRyR4uECezsRINDA6ZieFPumdFL+6yySpXM6t8=
 github.com/buger/goterm v1.0.4 h1:Z9YvGmOih81P0FbVtEYTFF6YsSgxSUKEhf/f9bTMXbY=

@@ -128,6 +128,8 @@ func (nbi *NetboxInventory) softDelete(orphanItem objects.OrphanItem) error {
 			_, err = service.Patch[objects.WirelessLAN](nbi.OrphanManager.Ctx, nbi.NetboxAPI, orphanItem.GetID(), diffMap)
 		case *objects.WirelessLANGroup:
 			_, err = service.Patch[objects.WirelessLANGroup](nbi.OrphanManager.Ctx, nbi.NetboxAPI, orphanItem.GetID(), diffMap)
+		case *objects.MACAddress:
+			_, err = service.Patch[objects.MACAddress](nbi.OrphanManager.Ctx, nbi.NetboxAPI, orphanItem.GetID(), diffMap)
 		default:
 			return fmt.Errorf("unsupported type for orphan item%T", orphanItem)
 		}
