@@ -33,7 +33,9 @@ func (is *IOSXESource) Init() error {
 		options.WithAuthUsername(is.SourceConfig.Username),
 		options.WithAuthPassword(is.SourceConfig.Password),
 		options.WithPort(is.SourceConfig.Port),
-		options.WithAuthNoStrictKey(), // inside container we can't confirm ssh key
+		options.WithAuthNoStrictKey(),
+		// See https://github.com/SRC-doo/netbox-ssot/issues/498
+		options.WithSSHConfigFile("~/.ssh/config"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create driver: %s", err)

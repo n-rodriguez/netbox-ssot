@@ -50,6 +50,15 @@ RUN addgroup -S -g 10001 netbox && \
   chown -R netbox:netbox /app
 USER netbox:netbox
 
+# Also allow deprecated ssh algorithims for older devices
+# See https://github.com/SRC-doo/netbox-ssot/issues/498
+RUN mkdir -p /home/netbox/.ssh/ && \
+cat <<EOF > /home/netbox/.ssh/config
+Host *
+  HostKeyAlgorithms +ssh-rsa
+  PubkeyAcceptedKeyTypes +ssh-rsa
+EOF
+
 WORKDIR /app
 
 COPY --from=builder --chown=netbox:netbox /app/cmd/netbox-ssot/main ./main
