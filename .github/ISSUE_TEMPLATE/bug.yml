@@ -48,7 +48,7 @@ body:
       required: true
 
   - type: input
-    id: version
+    id: ssot-version
     attributes:
       label: Which version of netbox-ssot are you running
       description: |
