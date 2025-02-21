@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - v\d+\.\d+\.\d+
+  workflow_dispatch:
 
 jobs:
   goreleaser:
@@ -25,3 +26,5 @@ jobs:
           distribution: goreleaser
           version: '~> v2'
           args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
