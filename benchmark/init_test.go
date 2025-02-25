@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bl4ko/netbox-ssot/internal/constants"
-	"github.com/bl4ko/netbox-ssot/internal/logger"
-	"github.com/bl4ko/netbox-ssot/internal/netbox/inventory"
-	"github.com/bl4ko/netbox-ssot/internal/netbox/objects"
-	"github.com/bl4ko/netbox-ssot/internal/parser"
-	"github.com/bl4ko/netbox-ssot/internal/utils"
+	"github.com/src-doo/netbox-ssot/internal/constants"
+	"github.com/src-doo/netbox-ssot/internal/logger"
+	"github.com/src-doo/netbox-ssot/internal/netbox/inventory"
+	"github.com/src-doo/netbox-ssot/internal/netbox/objects"
+	"github.com/src-doo/netbox-ssot/internal/parser"
+	"github.com/src-doo/netbox-ssot/internal/utils"
 )
 
 const (
@@ -91,7 +91,9 @@ func InitManufacturers(ctx context.Context, n int, nbi *inventory.NetboxInventor
 
 func InitPlatforms(ctx context.Context, n int, nbi *inventory.NetboxInventory) {
 	for i := 0; i < n; i++ {
-		manufacturer, _ := nbi.GetManufacturer(fmt.Sprintf("Manufacturer %d", i%NumberOfManufacturers))
+		manufacturer, _ := nbi.GetManufacturer(
+			fmt.Sprintf("Manufacturer %d", i%NumberOfManufacturers),
+		)
 		platformName := fmt.Sprintf("Platform %d", i)
 		_, err := nbi.AddPlatform(ctx, &objects.Platform{
 			Name:         platformName,

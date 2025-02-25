@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bl4ko/netbox-ssot/internal/constants"
-	"github.com/bl4ko/netbox-ssot/internal/netbox/inventory"
-	"github.com/bl4ko/netbox-ssot/internal/netbox/objects"
-	"github.com/bl4ko/netbox-ssot/internal/utils"
+	"github.com/src-doo/netbox-ssot/internal/constants"
+	"github.com/src-doo/netbox-ssot/internal/netbox/inventory"
+	"github.com/src-doo/netbox-ssot/internal/netbox/objects"
+	"github.com/src-doo/netbox-ssot/internal/utils"
 )
 
 // Function that matches cluster to tenant using regexRelationsMap.

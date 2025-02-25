@@ -30,13 +30,13 @@ ARG CREATED
 ARG COMMIT
 
 LABEL \
-  org.opencontainers.image.authors="bl4ko" \
+  org.opencontainers.image.authors="src-doo" \
   org.opencontainers.image.created=$CREATED \
   org.opencontainers.image.version=$VERSION \
   org.opencontainers.image.revision=$COMMIT \
-  org.opencontainers.image.url="https://github.com/bl4ko/netbox-ssot" \
-  org.opencontainers.image.documentation="https://github.com/bl4ko/netbox-ssot/blob/main/README.md" \
-  org.opencontainers.image.source="https://github.com/bl4ko/netbox-ssot" \
+  org.opencontainers.image.url="https://github.com/src-doo/netbox-ssot" \
+  org.opencontainers.image.documentation="https://github.com/src-doo/netbox-ssot/blob/main/README.md" \
+  org.opencontainers.image.source="https://github.com/src-doo/netbox-ssot" \
   org.opencontainers.image.title="Netbox-ssot" \
   org.opencontainers.image.description="Microservice for syncing Netbox with multiple external sources."
 
