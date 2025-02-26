@@ -1364,7 +1364,7 @@ func (vc *VmwareSource) collectVMInterfaceData(
 	var vlanDescription string
 	intLabel := intDeviceInfo.GetDescription().Label
 	splitStr := strings.Split(intLabel, " ")
-	intName := fmt.Sprintf("vNic %s", splitStr[len(splitStr)-1])
+	intName := fmt.Sprintf("vNIC %s", splitStr[len(splitStr)-1])
 	intFullName := intName
 	if intNetworkName != "" {
 		intFullName = fmt.Sprintf("%s (%s)", intFullName, intNetworkName)
