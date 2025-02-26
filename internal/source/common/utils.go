@@ -88,7 +88,10 @@ func MatchVlanToGroup(
 	vlanGroupSiteRelations map[string]string,
 ) (*objects.VlanGroup, error) {
 	if vlanGroupRelations == nil {
-		vlanGroup, _ := nbi.CreateDefaultVlanGroupForVlan(ctx, vlanSite)
+		vlanGroup, err := nbi.CreateDefaultVlanGroupForVlan(ctx, vlanSite)
+		if err != nil {
+			return nil, fmt.Errorf("create default vlan group for vlan %s: %s", vlanName, err)
+		}
 		return vlanGroup, nil
 	}
 	vlanGroupName, err := utils.MatchStringToValue(vlanName, vlanGroupRelations)
@@ -111,7 +114,7 @@ func MatchVlanToGroup(
 			}
 		}
 	}
-	var vlanGroup *objects.VlanGroup
+
 	if vlanGroupName != "" {
 		vlanGroup := &objects.VlanGroup{
 			Name:      vlanGroupName,
@@ -127,6 +130,12 @@ func MatchVlanToGroup(
 			return nil, fmt.Errorf("add vlan group %+v: %s", vlanGroup, err)
 		}
 		return vlanGroup, nil
+	}
+
+	// No vlan group was matched create default one.
+	vlanGroup, err := nbi.CreateDefaultVlanGroupForVlan(ctx, vlanSite)
+	if err != nil {
+		return nil, fmt.Errorf("create default vlan group for vlan %s: %s", vlanName, err)
 	}
 	return vlanGroup, nil
 }
