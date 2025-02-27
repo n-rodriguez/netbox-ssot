@@ -347,7 +347,7 @@ func (ps *ProxmoxSource) syncVMNetworks(nbi *inventory.NetboxInventory, nbVM *ob
 			return fmt.Errorf("add vm interface %+v: %s", vmInterfaceStruct, err)
 		}
 		vmIfaceMAC := strings.ToUpper(vmNetwork.HardwareAddress)
-		if vmIfaceMAC == "" {
+		if vmIfaceMAC != "" {
 			nbMACAddress, err := common.CreateMACAddressForObjectType(
 				ps.Ctx,
 				nbi,
