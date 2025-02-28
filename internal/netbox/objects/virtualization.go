@@ -257,3 +257,39 @@ func (vmi *VMInterface) SetPrimaryMACAddress(mac *MACAddress) {
 func (vmi *VMInterface) GetNetboxObject() *NetboxObject {
 	return &vmi.NetboxObject
 }
+
+type VirtualDisk struct {
+	NetboxObject
+	// VM that this disk belongs to. This field is required.
+	VM *VM `json:"virtual_machine,omitempty"`
+	// Name is the name of the disk. This field is required.
+	Name string `json:"name,omitempty"`
+	// Size is the size of the disk in MB. This field is required.
+	Size int `json:"size,omitempty"`
+}
+
+func (vd VirtualDisk) String() string {
+	return fmt.Sprintf(
+		"VirtualDisk{Name: %s, VM: %s}",
+		vd.Name,
+		vd.VM.Name,
+	)
+}
+
+// VirtualDisk implements IDItem interface.
+func (vd *VirtualDisk) GetID() int {
+	return vd.ID
+}
+
+func (vd *VirtualDisk) GetObjectType() constants.ContentType {
+	return constants.ContentTypeVirtualizationVirtualDisk
+}
+
+func (vd *VirtualDisk) GetAPIPath() constants.APIPath {
+	return constants.VirtualDisksAPIPath
+}
+
+// VMInterface implements OrphanItem interface.
+func (vd *VirtualDisk) GetNetboxObject() *NetboxObject {
+	return &vd.NetboxObject
+}

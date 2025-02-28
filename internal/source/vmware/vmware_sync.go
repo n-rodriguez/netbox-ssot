@@ -519,7 +519,7 @@ func (vc *VmwareSource) collectHostPhysicalNicData(
 		}
 	}
 	var pnicDescription string
-	if pnicLinkSpeedMb*constants.MB >= constants.GB {
+	if pnicLinkSpeedMb/constants.KB >= 1 {
 		pnicDescription = fmt.Sprintf("%dGB/s", pnicLinkSpeedMb/constants.KB)
 	} else {
 		pnicDescription = fmt.Sprintf("%dMB/s", pnicLinkSpeedMb)
@@ -614,7 +614,7 @@ func (vc *VmwareSource) collectHostPhysicalNicData(
 					}
 					newVlan, err = nbi.AddVlan(vc.Ctx, vlanStruct)
 					if err != nil {
-						return nil, "", fmt.Errorf("add vlan %+v: %s", newVlan, err)
+						return nil, "", fmt.Errorf("add vlan %+v: %s", vlanStruct, err)
 					}
 				}
 				vlanIDMap[portgroupData.vlanID] = newVlan
@@ -951,12 +951,12 @@ func (vc *VmwareSource) collectHostVirtualNicData(
 // syncVMs syncs VMs from the source to Netbox.
 func (vc *VmwareSource) syncVMs(nbi *inventory.NetboxInventory) error {
 	const maxGoroutines = 50 // Maximum number of goroutines to run concurrently
-	guard := make(
-		chan struct{},
-		maxGoroutines,
-	) // Use a channel as a semaphore to limit the number of goroutines
-	errChan := make(chan error, len(vc.Vms)) // Channel to collect errors
-	var wg sync.WaitGroup                    // WaitGroup to wait for all goroutines to complete
+	// Use a guard channel as semaphore to limit the number of goroutines
+	guard := make(chan struct{}, maxGoroutines)
+	// Use errChan to collect errors from goroutines
+	errChan := make(chan error, len(vc.Vms))
+	// Use a WaitGroup to wait for all goroutines to complete
+	var wg sync.WaitGroup
 
 	// Iterate over each VM and start a goroutine to sync it
 	for vmKey, vm := range vc.Vms {
@@ -1063,13 +1063,23 @@ func (vc *VmwareSource) syncVM(
 	vmMemoryMB := vm.Config.Hardware.MemoryMB
 
 	// DisksSize
-	vmDiskSizeB := int64(0)
+	// vmTotalDiskSizeMiB := int64(0)
+	vmDisks := make([]*objects.VirtualDisk, 0)
 	for _, hwDevice := range vm.Config.Hardware.Device {
 		if disk, ok := hwDevice.(*types.VirtualDisk); ok {
-			vmDiskSizeB += disk.CapacityInBytes
+			vmDiskSizeMiB := disk.CapacityInBytes / constants.MiB
+			vmDiskName := disk.DeviceInfo.GetDescription().Label
+			vmDiskSummary := disk.DeviceInfo.GetDescription().Summary
+			vmDisks = append(vmDisks, &objects.VirtualDisk{
+				NetboxObject: objects.NetboxObject{
+					Description: vmDiskSummary,
+				},
+				Name: vmDiskName,
+				Size: int(vmDiskSizeMiB),
+			})
+			// vmTotalDiskSizeMiB += vmDiskSizeMiB
 		}
 	}
-	vmDiskSizeMiB := vmDiskSizeB / constants.GiB * constants.KB
 
 	// Determine guest OS using fallback mechanisms
 	var platformName string
@@ -1159,7 +1169,7 @@ func (vc *VmwareSource) syncVM(
 		Platform: vmPlatform,
 		VCPUs:    float32(vmVCPUs),
 		Memory:   int(vmMemoryMB),
-		Disk:     int(vmDiskSizeMiB),
+		// Disk:     int(vmTotalDiskSizeMiB),
 		Comments: vmComments,
 		Role:     vmRole,
 	}
@@ -1179,6 +1189,28 @@ func (vc *VmwareSource) syncVM(
 		err = vc.syncVMInterfaces(nbi, vm, newVM)
 		if err != nil {
 			return fmt.Errorf("failed to sync vmware %s's interfaces: %v", newVM, err)
+		}
+
+		// Sync vm disks
+		err := vc.syncVMDisks(nbi, newVM, vmDisks)
+		if err != nil {
+			return fmt.Errorf("failed to sync vm's %+v disks: %s", newVM, err)
+		}
+	}
+	return nil
+}
+
+// syncVMDisks syncs VM's disks to Netbox.
+func (vc *VmwareSource) syncVMDisks(
+	nbi *inventory.NetboxInventory,
+	vm *objects.VM,
+	vmDisks []*objects.VirtualDisk,
+) error {
+	for _, disk := range vmDisks {
+		disk.VM = vm
+		_, err := nbi.AddVirtualDisk(vc.Ctx, disk)
+		if err != nil {
+			return fmt.Errorf("adding VirtualDisk %+v: %s", disk, err)
 		}
 	}
 	return nil

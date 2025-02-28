@@ -44,6 +44,7 @@ var Type2Path = map[reflect.Type]constants.APIPath{
 	reflect.TypeOf((*objects.Prefix)(nil)).Elem():               constants.PrefixesAPIPath,
 	reflect.TypeOf((*objects.WirelessLAN)(nil)).Elem():          constants.WirelessLANsAPIPath,
 	reflect.TypeOf((*objects.WirelessLANGroup)(nil)).Elem():     constants.WirelessLANGroupsAPIPath,
+	reflect.TypeOf((*objects.VirtualDisk)(nil)).Elem():          constants.VirtualDisksAPIPath,
 }
 
 var Path2Type = reverseMap(Type2Path)

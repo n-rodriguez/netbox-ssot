@@ -196,6 +196,11 @@ type NetboxInventory struct {
 	// indexed by their ssid
 	wirelessLANsIndexBySSID map[string]*objects.WirelessLAN
 	wirelessLANsLock        sync.Mutex
+
+	// virtualDisksIndex is a map of all virtual disks in the inventory,
+	// indexed by their vm's id and vm's name
+	virtualDisksIndexByVMIDAndName map[int]map[string]*objects.VirtualDisk
+	virtualDisksLock               sync.Mutex
 }
 
 // Func string representation.
@@ -276,6 +281,7 @@ func (nbi *NetboxInventory) Init() error {
 		nbi.initManufacturers,
 		nbi.initPlatforms,
 		nbi.initVMs,
+		nbi.initVirtualDisks,
 		nbi.initVMInterfaces,
 		nbi.initDevices,
 		nbi.initInterfaces,

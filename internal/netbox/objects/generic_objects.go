@@ -12,7 +12,6 @@ type OrphanItem interface {
 	GetID() int
 	GetObjectType() constants.ContentType
 	GetAPIPath() constants.APIPath
-
 	GetNetboxObject() *NetboxObject
 }
 
@@ -20,7 +19,6 @@ type MACAddressOwner interface {
 	GetID() int
 	GetObjectType() constants.ContentType
 	GetAPIPath() constants.APIPath
-
 	GetPrimaryMACAddress() *MACAddress
 	SetPrimaryMACAddress(mac *MACAddress)
 }
@@ -29,7 +27,6 @@ type IPAddressOwner interface {
 	GetID() int
 	GetObjectType() constants.ContentType
 	GetAPIPath() constants.APIPath
-
 	GetPrimaryIPv4Address() *IPAddress
 	GetPrimaryIPv6Address() *IPAddress
 	SetPrimaryIPAddress(ip *IPAddress)

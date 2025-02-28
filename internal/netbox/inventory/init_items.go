@@ -490,6 +490,7 @@ func (nbi *NetboxInventory) initSsotCustomFields(ctx context.Context) error {
 			constants.ContentTypeVirtualizationVMInterface,
 			constants.ContentTypeWirelessLAN,
 			constants.ContentTypeWirelessLANGroup,
+			constants.ContentTypeVirtualizationVirtualDisk,
 		},
 	})
 	if err != nil {
@@ -537,6 +538,7 @@ func (nbi *NetboxInventory) initSsotCustomFields(ctx context.Context) error {
 			constants.ContentTypeWirelessLAN,
 			constants.ContentTypeWirelessLANGroup,
 			constants.ContentTypeDcimMACAddress,
+			constants.ContentTypeVirtualizationVirtualDisk,
 		},
 	})
 	if err != nil {
@@ -580,6 +582,7 @@ func (nbi *NetboxInventory) initSsotCustomFields(ctx context.Context) error {
 			constants.ContentTypeVirtualizationClusterType,
 			constants.ContentTypeVirtualizationVirtualMachine,
 			constants.ContentTypeVirtualizationVMInterface,
+			constants.ContentTypeVirtualizationVirtualDisk,
 		},
 	})
 	if err != nil {
@@ -1080,5 +1083,33 @@ func (nbi *NetboxInventory) initWirelessLANGroups(ctx context.Context) error {
 		"Successfully collected wireless-lan-groups from Netbox: ",
 		nbi.wirelessLANGroupsIndexByName,
 	)
+	return nil
+}
+
+// initVirtualDisks collects all virtual disks from Netbox API
+// and stores them to local inventory.
+func (nbi *NetboxInventory) initVirtualDisks(ctx context.Context) error {
+	extraArgs := fmt.Sprintf(
+		"&fields=%s",
+		utils.ExtractJSONTagsFromStructIntoString(objects.VirtualDisk{}),
+	)
+	nbVirtualDisks, err := service.GetAll[objects.VirtualDisk](ctx, nbi.NetboxAPI, extraArgs)
+	if err != nil {
+		return err
+	}
+
+	// Initialize internal index of virtual disks by name and VM id
+	nbi.virtualDisksIndexByVMIDAndName = make(map[int]map[string]*objects.VirtualDisk)
+
+	for i := range nbVirtualDisks {
+		virtualDisk := &nbVirtualDisks[i]
+		if nbi.virtualDisksIndexByVMIDAndName[virtualDisk.VM.ID] == nil {
+			nbi.virtualDisksIndexByVMIDAndName[virtualDisk.VM.ID] = make(
+				map[string]*objects.VirtualDisk,
+			)
+		}
+		nbi.virtualDisksIndexByVMIDAndName[virtualDisk.VM.ID][virtualDisk.Name] = virtualDisk
+		nbi.OrphanManager.AddItem(virtualDisk)
+	}
 	return nil
 }

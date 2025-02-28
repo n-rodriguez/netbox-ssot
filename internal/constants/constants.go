@@ -252,6 +252,7 @@ const (
 	ContentTypeVirtualizationClusterType    ContentType = "virtualization.clustertype"
 	ContentTypeVirtualizationVirtualMachine ContentType = "virtualization.virtualmachine"
 	ContentTypeVirtualizationVMInterface    ContentType = "virtualization.vminterface"
+	ContentTypeVirtualizationVirtualDisk    ContentType = "virtualization.virtualdisk"
 
 	// Wireless object type.
 	ContentTypeWirelessLink     ContentType = "wireless.wirelesslink"
@@ -284,6 +285,7 @@ const (
 	ClustersAPIPath        APIPath = "/api/virtualization/clusters/"
 	VirtualMachinesAPIPath APIPath = "/api/virtualization/virtual-machines/"
 	VMInterfacesAPIPath    APIPath = "/api/virtualization/interfaces/"
+	VirtualDisksAPIPath    APIPath = "/api/virtualization/virtual-disks/"
 
 	// DCIM paths.
 	DevicesAPIPath               APIPath = "/api/dcim/devices/"

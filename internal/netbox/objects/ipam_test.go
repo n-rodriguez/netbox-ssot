@@ -69,11 +69,11 @@ func TestVlan_String(t *testing.T) {
 				NetboxObject: NetboxObject{
 					ID: 1,
 				},
-				Name:   "Test vlan",
-				Vid:    10,
-				Status: &VlanStatusActive,
+				Name:  "Test vlan",
+				Vid:   10,
+				Group: &VlanGroup{Name: "Test vlan group"},
 			},
-			want: "Vlan{ID: 1, Name: Test vlan, Vid: 10, Status: active}",
+			want: "Vlan{ID: 1, Name: Test vlan, Vid: 10, Group: Test vlan group}",
 		},
 	}
 	for _, tt := range tests {

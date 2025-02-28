@@ -142,7 +142,9 @@ type Vlan struct {
 }
 
 func (v Vlan) String() string {
-	return fmt.Sprintf("Vlan{ID: %d, Name: %s, Vid: %d, Status: %s}", v.ID, v.Name, v.Vid, v.Status)
+	return fmt.Sprintf(
+		"Vlan{ID: %d, Name: %s, Vid: %d, Group: %s}",
+		v.ID, v.Name, v.Vid, v.Group.Name)
 }
 
 // Vlan implements IDItem interface.
