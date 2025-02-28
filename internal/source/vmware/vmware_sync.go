@@ -78,6 +78,10 @@ func (vc *VmwareSource) syncNetworks(nbi *inventory.NetboxInventory) error {
 			return fmt.Errorf("vlanTenant: %s", err)
 		}
 		if len(dvpg.VlanIDs) == 1 && len(dvpg.VlanIDRanges) == 0 && dvpg.VlanIDs[0] != 0 {
+			vlanName := dvpg.Name
+			if !strings.HasPrefix(vlanName, "VLAN") {
+				vlanName = fmt.Sprintf("VLAN%04d_%s", dvpg.VlanIDs[0], vlanName)
+			}
 			networkTags := vc.Object2NBTags[dvpgID]
 			vlanStruct := &objects.Vlan{
 				NetboxObject: objects.NetboxObject{
@@ -86,7 +90,7 @@ func (vc *VmwareSource) syncNetworks(nbi *inventory.NetboxInventory) error {
 						constants.CustomFieldSourceIDName: dvpgID,
 					},
 				},
-				Name:   dvpg.Name,
+				Name:   vlanName,
 				Group:  vlanGroup,
 				Site:   vlanSite,
 				Vid:    dvpg.VlanIDs[0],
@@ -580,6 +584,9 @@ func (vc *VmwareSource) collectHostPhysicalNicData(
 				}
 			} else {
 				vlanName := portgroupName
+				if !strings.HasPrefix(vlanName, "VLAN") {
+					vlanName = fmt.Sprintf("VLAN%04d_%s", portgroupData.vlanID, vlanName)
+				}
 				vlanSite, err := common.MatchVlanToSite(vc.Ctx, nbi, vlanName, vc.SourceConfig.VlanSiteRelations)
 				if err != nil {
 					return nil, "", fmt.Errorf("match vlan to site: %s", err)
