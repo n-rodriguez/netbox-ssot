@@ -1066,8 +1066,11 @@ func (vc *VmwareSource) syncVM(
 	}
 
 	// vmVCPUs and vmMemory
-	vmVCPUs := vm.Config.Hardware.NumCPU
-	vmMemoryMB := vm.Config.Hardware.MemoryMB
+	var vmVCPUs, vmMemoryMB int32
+	if vm.Config != nil {
+		vmVCPUs = vm.Config.Hardware.NumCPU
+		vmMemoryMB = vm.Config.Hardware.MemoryMB
+	}
 
 	// DisksSize
 	// vmTotalDiskSizeMiB := int64(0)

@@ -74,7 +74,7 @@ func main() {
 	// Variable to store if the run was successful. If it wasn't we don't remove orphans.
 	successfullRun := true
 	// Variable to store failed sourcesFalse
-	encounteredErrors := map[string]bool{}
+	encounteredErrors := map[string]error{}
 
 	// Go through all sources and sync data
 	var wg sync.WaitGroup
@@ -104,7 +104,7 @@ func main() {
 			if err != nil {
 				ssotLogger.Error(sourceCtx, err)
 				successfullRun = false
-				encounteredErrors[sourceName] = true
+				encounteredErrors[sourceName] = err
 				return
 			}
 			ssotLogger.Infof(sourceCtx, "Successfully initialized source %s", constants.CheckMark)
@@ -115,7 +115,7 @@ func main() {
 			if err != nil {
 				successfullRun = false
 				ssotLogger.Error(sourceCtx, err)
-				encounteredErrors[sourceName] = true
+				encounteredErrors[sourceName] = err
 				return
 			}
 			ssotLogger.Infof(sourceCtx, "Source synced successfully %s", constants.CheckMark)
@@ -148,8 +148,8 @@ func main() {
 			seconds,
 		)
 	} else {
-		for source := range encounteredErrors {
-			ssotLogger.Infof(mainCtx, "%s syncing of source %s failed", constants.WarningSign, source)
+		for source, err := range encounteredErrors {
+			ssotLogger.Infof(mainCtx, "%s syncing of source %s failed with: %v", constants.WarningSign, source, err)
 		}
 		os.Exit(1)
 	}
