@@ -10,7 +10,7 @@ require (
 	github.com/scrapli/scrapligo v1.3.3
 	github.com/src-doo/go-devicetype-library v0.1.56
 	github.com/vmware/govmomi v0.48.1
-	golang.org/x/text v0.22.0
+	golang.org/x/text v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -25,7 +25,7 @@ require (
 	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/magefile/mage v1.15.0 // indirect
 	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 )
