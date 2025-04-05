@@ -3,7 +3,6 @@
 [![Go](https://github.com/src-doo/netbox-ssot/actions/workflows/ci.yml/badge.svg)](https://github.com/src-doo/netbox-ssot/actions/workflows/ci.yml)
 ![GitHub last commit](https://img.shields.io/github/last-commit/src-doo/netbox-ssot)
 ![GitHub Tag](https://img.shields.io/github/v/tag/src-doo/netbox-ssot)
-[![codecov](https://codecov.io/gh/src-doo/netbox-ssot/graph/badge.svg?token=W0GQQKS6BP)](https://codecov.io/gh/src-doo/netbox-ssot)
 ![GitHub License](https://img.shields.io/github/license/src-doo/netbox-ssot)
 
 Netbox-ssot is a small but powerful microservice designed to
