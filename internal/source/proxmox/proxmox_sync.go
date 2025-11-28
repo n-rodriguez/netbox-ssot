@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -16,6 +17,7 @@ import (
 func (ps *ProxmoxSource) syncCluster(nbi *inventory.NetboxInventory) error {
 	var clusterScopeType constants.ContentType
 	var clusterScopeID int
+
 	clusterSite, err := common.MatchClusterToSite(
 		ps.Ctx,
 		nbi,
@@ -25,10 +27,12 @@ func (ps *ProxmoxSource) syncCluster(nbi *inventory.NetboxInventory) error {
 	if err != nil {
 		return err
 	}
+
 	if clusterSite != nil {
 		clusterScopeType = constants.ContentTypeDcimSite
 		clusterScopeID = clusterSite.ID
 	}
+
 	clusterTenant, err := common.MatchClusterToTenant(
 		ps.Ctx,
 		nbi,
@@ -38,6 +42,7 @@ func (ps *ProxmoxSource) syncCluster(nbi *inventory.NetboxInventory) error {
 	if err != nil {
 		return err
 	}
+
 	clusterTypeStruct := &objects.ClusterType{
 		NetboxObject: objects.NetboxObject{
 			Tags: []*objects.Tag{ps.SourceTypeTag},
@@ -45,12 +50,13 @@ func (ps *ProxmoxSource) syncCluster(nbi *inventory.NetboxInventory) error {
 		Name: "Proxmox",
 		Slug: utils.Slugify("Proxmox"),
 	}
+
 	clusterType, err := nbi.AddClusterType(ps.Ctx, clusterTypeStruct)
 	if err != nil {
 		return fmt.Errorf("add cluster type %+v: %s", clusterTypeStruct, err)
 	}
 
-	// Check if proxmox is running standalon node.
+	// Check if proxmox is running standalone node.
 	// in that case cluster name is empty and should set SourceConfig.Name for Cluster.Name
 	if ps.Cluster.Name == "" {
 		ps.Cluster.Name = ps.SourceConfig.Name
@@ -66,16 +72,19 @@ func (ps *ProxmoxSource) syncCluster(nbi *inventory.NetboxInventory) error {
 		ScopeID:   clusterScopeID,
 		Tenant:    clusterTenant,
 	}
+
 	nbCluster, err := nbi.AddCluster(ps.Ctx, clusterStruct)
 	if err != nil {
 		return fmt.Errorf("add cluster %+v: %s", clusterStruct, err)
 	}
+
 	ps.NetboxCluster = nbCluster
 	return nil
 }
 
 func (ps *ProxmoxSource) syncNodes(nbi *inventory.NetboxInventory) error {
 	ps.NetboxNodes = make(map[string]*objects.Device, len(ps.Nodes))
+
 	for _, node := range ps.Nodes {
 		var hostSite *objects.Site
 
@@ -87,6 +96,7 @@ func (ps *ProxmoxSource) syncNodes(nbi *inventory.NetboxInventory) error {
 		if ps.NetboxCluster.ScopeType == constants.ContentTypeDcimSite {
 			hostSite = nbi.GetSiteByID(ps.NetboxCluster.ScopeID)
 		}
+
 		var err error
 		if hostSite == nil {
 			hostSite, err = common.MatchHostToSite(
@@ -99,6 +109,7 @@ func (ps *ProxmoxSource) syncNodes(nbi *inventory.NetboxInventory) error {
 				return fmt.Errorf("match host to site: %s", err)
 			}
 		}
+
 		hostTenant, err := common.MatchHostToTenant(
 			ps.Ctx,
 			nbi,
@@ -108,6 +119,8 @@ func (ps *ProxmoxSource) syncNodes(nbi *inventory.NetboxInventory) error {
 		if err != nil {
 			return fmt.Errorf("match host to tenant: %s", err)
 		}
+
+		// Manufacturer
 		// TODO: find a way to get device type info from proxmox
 		manufacturerStruct := &objects.Manufacturer{
 			NetboxObject: objects.NetboxObject{
@@ -120,6 +133,8 @@ func (ps *ProxmoxSource) syncNodes(nbi *inventory.NetboxInventory) error {
 		if err != nil {
 			return fmt.Errorf("adding host manufacturer %+v: %s", manufacturerStruct, err)
 		}
+
+		// DeviceType
 		deviceTypeStruct := &objects.DeviceType{
 			NetboxObject: objects.NetboxObject{
 				Description: constants.DefaultDeviceTypeDescription,
@@ -227,9 +242,13 @@ func (ps *ProxmoxSource) syncNodeNetworks(
 
 // Function that synces proxmox vms to the netbox inventory.
 func (ps *ProxmoxSource) syncVMs(nbi *inventory.NetboxInventory) error {
+	// Maximum number of goroutines to run concurrently
 	const maxGoroutines = 50
+	// Use a guard channel as semaphore to limit the number of goroutines
 	guard := make(chan struct{}, maxGoroutines)
+	// Use errChan to collect errors from goroutines
 	errChan := make(chan error, len(ps.Vms))
+	// Use a WaitGroup to wait for all goroutines to complete
 	var wg sync.WaitGroup
 
 	for nodeName, vms := range ps.Vms {
@@ -237,8 +256,9 @@ func (ps *ProxmoxSource) syncVMs(nbi *inventory.NetboxInventory) error {
 		if ps.SourceConfig.AssignDomainName != "" {
 			nodeName += ps.SourceConfig.AssignDomainName
 		}
-
 		nbHost := ps.NetboxNodes[nodeName]
+
+		// Iterate over each VM and start a goroutine to sync it
 		for _, vm := range vms {
 			guard <- struct{}{} // Block if maxGoroutines are running
 			wg.Add(1)
@@ -251,10 +271,12 @@ func (ps *ProxmoxSource) syncVMs(nbi *inventory.NetboxInventory) error {
 				if err != nil {
 					errChan <- err
 				}
+
 			}(vm, nbHost)
 		}
 	}
 
+	// Wait for all goroutines to complete
 	wg.Wait()
 	close(errChan)
 	close(guard)
@@ -288,55 +310,328 @@ func (ps *ProxmoxSource) syncVM(
 		vmStatus = &objects.VMStatusOffline
 	}
 
+	// Determine VM platform
+	var vmAgentOsInfo *proxmox.AgentOsInfo
+	if vm.Status == "running" {
+		vmAgentOsInfo, _ = vm.AgentOsInfo(ps.Ctx)
+	}
+
+	platformName := "Unknown"
+	if vmAgentOsInfo != nil && vmAgentOsInfo.PrettyName != "" {
+		platformName = vmAgentOsInfo.PrettyName
+	}
+
+	if platformName == "Unknown" {
+		switch osType := vm.VirtualMachineConfig.OSType; osType {
+		case "l26":
+			platformName = "Other 2.6.x Linux (64-bit)"
+		case "win11":
+			platformName = "Windows 11"
+		}
+	}
+
+	platformStruct := &objects.Platform{
+		Name: platformName,
+		Slug: utils.Slugify(platformName),
+	}
+
+	vmPlatform, err := nbi.AddPlatform(ps.Ctx, platformStruct)
+	if err != nil {
+		return fmt.Errorf("failed to add vm's %+v platform: %s", vm, err)
+	}
+
 	// Determine VM tenant
 	vmTenant, err := common.MatchVMToTenant(ps.Ctx, nbi, vm.Name, ps.SourceConfig.VMTenantRelations)
 	if err != nil {
-		return fmt.Errorf("match vm to tenant: %s", err)
+		return fmt.Errorf("failed to match vm to tenant: %s", err)
 	}
 
+	// Determine VM role
 	var vmRole *objects.DeviceRole
 	if len(ps.SourceConfig.VMRoleRelations) > 0 {
 		vmRole, err = common.MatchVMToRole(ps.Ctx, nbi, vm.Name, ps.SourceConfig.VMRoleRelations)
 		if err != nil {
-			return fmt.Errorf("match vm to role: %s", err)
+			return fmt.Errorf("failed to match vm to role: %s", err)
 		}
 	}
+
 	if vmRole == nil {
 		vmRole, err = nbi.AddVMDeviceRole(ps.Ctx)
 		if err != nil {
-			return fmt.Errorf("add vm device role: %s", err)
+			return fmt.Errorf("failed to add vm's %+v device role: %s", vm, err)
+		}
+	}
+
+	// Fetch VM disks
+	vmDisks := make([]*objects.VirtualDisk, 0)
+	vmTotalDiskSizeMiB := 0
+
+	// Fetch VirtIOs disks
+	if len(vm.VirtualMachineConfig.VirtIOs) > 0 {
+		for _, disk := range vm.VirtualMachineConfig.VirtIOs {
+			diskData := strings.Split(disk, ",")
+			diskName := diskData[0]
+			diskSize := 0
+
+			for index, item := range diskData {
+				// First element is disk name/path
+				if index == 0 {
+					continue
+				}
+
+				if strings.Contains(item, "size") {
+					sizeData := strings.Split(item, "=")
+					if strings.HasSuffix(sizeData[1], "G") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "G"))
+						diskSize *= constants.KB
+					}
+					if strings.HasSuffix(sizeData[1], "T") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "T"))
+						diskSize *= constants.MB
+					}
+					vmTotalDiskSizeMiB += diskSize
+				}
+			}
+
+			// Can't add disk with size == 0
+			if diskSize == 0 {
+				continue
+			}
+
+			ps.Logger.Debugf(
+				ps.Ctx,
+				"vm.Name: %s adding virtios disk: %s/%d",
+				vm.Name,
+				diskName,
+				diskSize,
+			)
+
+			vmDisks = append(vmDisks, &objects.VirtualDisk{
+				NetboxObject: objects.NetboxObject{
+					Description: diskName,
+				},
+				Name: diskName,
+				Size: diskSize,
+			})
+		}
+	}
+
+	// Fetch SCSIs disks
+	if len(vm.VirtualMachineConfig.SCSIs) > 0 {
+		for _, disk := range vm.VirtualMachineConfig.SCSIs {
+			diskData := strings.Split(disk, ",")
+			diskName := diskData[0]
+			diskSize := 0
+
+			for index, item := range diskData {
+				// First element is disk name/path
+				if index == 0 {
+					continue
+				}
+
+				if strings.Contains(item, "size") {
+					sizeData := strings.Split(item, "=")
+					if strings.HasSuffix(sizeData[1], "G") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "G"))
+						diskSize *= constants.KB
+					}
+					if strings.HasSuffix(sizeData[1], "T") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "T"))
+						diskSize *= constants.MB
+					}
+					vmTotalDiskSizeMiB += diskSize
+				}
+			}
+
+			// Can't add disk with size == 0
+			if diskSize == 0 {
+				continue
+			}
+
+			ps.Logger.Debugf(
+				ps.Ctx,
+				"vm.Name: %s adding scsi disk: %s/%d",
+				vm.Name,
+				diskName,
+				diskSize,
+			)
+
+			vmDisks = append(vmDisks, &objects.VirtualDisk{
+				NetboxObject: objects.NetboxObject{
+					Description: diskName,
+				},
+				Name: diskName,
+				Size: diskSize,
+			})
+		}
+	}
+
+	// Fetch SATAs disks
+	if len(vm.VirtualMachineConfig.SATAs) > 0 {
+		for _, disk := range vm.VirtualMachineConfig.SATAs {
+			diskData := strings.Split(disk, ",")
+			diskName := diskData[0]
+			diskSize := 0
+
+			for index, item := range diskData {
+				// First element is disk name/path
+				if index == 0 {
+					continue
+				}
+
+				if strings.Contains(item, "size") {
+					sizeData := strings.Split(item, "=")
+					if strings.HasSuffix(sizeData[1], "G") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "G"))
+						diskSize *= constants.KB
+					}
+					if strings.HasSuffix(sizeData[1], "T") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "T"))
+						diskSize *= constants.MB
+					}
+					vmTotalDiskSizeMiB += diskSize
+				}
+			}
+
+			// Can't add disk with size == 0
+			if diskSize == 0 {
+				continue
+			}
+
+			ps.Logger.Debugf(
+				ps.Ctx,
+				"vm.Name: %s adding sata disk: %s/%d",
+				vm.Name,
+				diskName,
+				diskSize,
+			)
+
+			vmDisks = append(vmDisks, &objects.VirtualDisk{
+				NetboxObject: objects.NetboxObject{
+					Description: diskName,
+				},
+				Name: diskName,
+				Size: diskSize,
+			})
+		}
+	}
+
+	// Fetch IDEs disks
+	if len(vm.VirtualMachineConfig.IDEs) > 0 {
+		for _, disk := range vm.VirtualMachineConfig.IDEs {
+			diskData := strings.Split(disk, ",")
+			diskName := diskData[0]
+			diskSize := 0
+
+			for index, item := range diskData {
+				// First element is disk name/path
+				if index == 0 {
+					continue
+				}
+
+				if strings.Contains(item, "size") {
+					sizeData := strings.Split(item, "=")
+					if strings.HasSuffix(sizeData[1], "G") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "G"))
+						diskSize *= constants.KB
+					}
+					if strings.HasSuffix(sizeData[1], "T") {
+						diskSize, _ = strconv.Atoi(strings.TrimSuffix(sizeData[1], "T"))
+						diskSize *= constants.MB
+					}
+					vmTotalDiskSizeMiB += diskSize
+				}
+			}
+
+			// Can't add disk with size == 0
+			if diskSize == 0 {
+				continue
+			}
+
+			ps.Logger.Debugf(
+				ps.Ctx,
+				"vm.Name: %s adding ide disk: %s/%d",
+				vm.Name,
+				diskName,
+				diskSize,
+			)
+
+			vmDisks = append(vmDisks, &objects.VirtualDisk{
+				NetboxObject: objects.NetboxObject{
+					Description: diskName,
+				},
+				Name: diskName,
+				Size: diskSize,
+			})
+		}
+	}
+
+	// Compute final VM disk size
+	if vmTotalDiskSizeMiB == 0 {
+		vmTotalDiskSizeMiB = int((vm.MaxDisk / constants.GiB) * 1000)
+	}
+
+	ps.Logger.Debugf(
+		ps.Ctx,
+		"vm.Name: %s vmTotalDiskSizeMiB: %d",
+		vm.Name,
+		vmTotalDiskSizeMiB,
+	)
+
+	// Fetch VM tags
+	newTags := ps.GetSourceTags()
+
+	if vm.Tags != "" {
+		splitTags := strings.Split(vm.Tags, ";")
+
+		for _, tag := range splitTags {
+			vmTag, _ := nbi.AddTag(ps.Ctx, &objects.Tag{
+				Name:  tag,
+				Slug:  utils.Slugify(tag),
+				Color: constants.ColorGreen,
+			})
+
+			newTags = append(newTags, vmTag)
 		}
 	}
 
 	// Add VM to Netbox
 	vmStruct := &objects.VM{
 		NetboxObject: objects.NetboxObject{
-			Tags: ps.GetSourceTags(),
+			Tags: newTags,
 			CustomFields: map[string]interface{}{
 				constants.CustomFieldSourceName:   ps.SourceConfig.Name,
 				constants.CustomFieldSourceIDName: fmt.Sprintf("%d", vm.VMID),
 			},
 		},
-		Host:    nbHost,
-		Cluster: ps.NetboxCluster, // Default single proxmox cluster
-		Tenant:  vmTenant,
-		Role:    vmRole,
-		VCPUs:   float32(vm.CPUs),
-		Memory:  int(vm.MaxMem / constants.MiB),  //nolint:gosec
-		Disk:    int(vm.MaxDisk / constants.MiB), //nolint:gosec
-		Site:    nbHost.Site,
-		Name:    vm.Name,
-		Status:  vmStatus,
+		Name:     vm.Name,
+		Cluster:  ps.NetboxCluster, // Default single proxmox cluster
+		Site:     nbHost.Site,
+		Tenant:   vmTenant,
+		Status:   vmStatus,
+		Host:     nbHost,
+		Platform: vmPlatform,
+		VCPUs:    float32(vm.CPUs),
+		Memory:   int(vm.MaxMem / constants.MiB), //nolint:gosec
+		Disk:     vmTotalDiskSizeMiB,             //nolint:gosec
+		Role:     vmRole,
 	}
+
 	nbVM, err := nbi.AddVM(ps.Ctx, vmStruct)
 	if err != nil {
-		return fmt.Errorf("add vm: %s", err)
+		return fmt.Errorf("failed to add vm: %s %s", vm.Name, err)
 	}
 
 	// Sync VM networks
 	err = ps.syncVMNetworks(nbi, nbVM)
 	if err != nil {
-		return fmt.Errorf("sync vm networks: %s", err)
+		return fmt.Errorf("failed to sync vm's %+v networks: %s", nbVM, err)
+	}
+
+	// Sync VM disks
+	err = ps.syncVMDisks(nbi, nbVM, vmDisks)
+	if err != nil {
+		return fmt.Errorf("failed to sync vm's %+v disks: %s", nbVM, err)
 	}
 
 	return nil
@@ -460,6 +755,22 @@ func (ps *ProxmoxSource) syncVMNetworks(nbi *inventory.NetboxInventory, nbVM *ob
 		_, err := nbi.AddVM(ps.Ctx, &nbVMCopy)
 		if err != nil {
 			return fmt.Errorf("updating vm primary ip: %s", err)
+		}
+	}
+	return nil
+}
+
+// syncVMDisks syncs VM's disks to Netbox.
+func (ps *ProxmoxSource) syncVMDisks(
+	nbi *inventory.NetboxInventory,
+	vm *objects.VM,
+	vmDisks []*objects.VirtualDisk,
+) error {
+	for _, disk := range vmDisks {
+		disk.VM = vm
+		_, err := nbi.AddVirtualDisk(ps.Ctx, disk)
+		if err != nil {
+			return fmt.Errorf("adding VirtualDisk %+v: %s", disk, err)
 		}
 	}
 	return nil
