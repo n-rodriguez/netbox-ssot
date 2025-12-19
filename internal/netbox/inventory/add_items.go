@@ -848,6 +848,16 @@ func (nbi *NetboxInventory) AddDevice(
 	if _, ok := nbi.devicesIndexByNameAndSiteID[newDevice.Name][newDevice.Site.ID]; ok {
 		oldDevice := nbi.devicesIndexByNameAndSiteID[newDevice.Name][newDevice.Site.ID]
 		nbi.OrphanManager.RemoveItem(oldDevice)
+
+		// Allow manual override device type
+		if newDevice.DeviceType != nil && oldDevice.DeviceType != nil &&
+			newDevice.DeviceType.ID != oldDevice.DeviceType.ID &&
+			oldDevice.NetboxObject.HasTag(nbi.IgnoreDeviceTypeTag) {
+			// Preserve manually set device type from NetBox and keep ignore tag
+			newDevice.DeviceType = oldDevice.DeviceType
+			newDevice.NetboxObject.AddTag(nbi.IgnoreDeviceTypeTag)
+		}
+
 		diffMap, err := utils.JSONDiffMapExceptID(newDevice, oldDevice, false, nbi.SourcePriority)
 		if err != nil {
 			return nil, err
